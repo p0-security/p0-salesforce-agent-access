@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 # Prints, as JSON, the values that the P0 Salesforce (AI) install asks for.
-# Takes the target org as the first argument, or as {"target_org": "..."} on
-# stdin, which is how the Terraform external data source calls it.
+# Usage: ./org-values.sh <sf CLI alias or username>
 set -euo pipefail
 
 target_org="${1:-}"
 if [[ -z "$target_org" ]]; then
-  target_org="$(jq -r '.target_org // empty')"
-fi
-if [[ -z "$target_org" ]]; then
-  echo "Give the target org" >&2
+  echo "Usage: ./org-values.sh <target org>" >&2
   exit 2
 fi
 

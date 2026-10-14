@@ -92,16 +92,11 @@ export P0_GATEWAY_ISSUER="$gateway_issuer" \
   P0_PROVISIONER_USERNAME="$provisioner" \
   P0_HANDLER_USERNAME="$handler" \
   P0_CONTACT_EMAIL="$contact"
-# The Salesforce CLI does not apply replacements under a path with a dot
-# directory, such as .terraform/modules. Deploy from a copy.
-org_setup="$(mktemp -d)"
-trap 'rm -rf "$org_setup"' EXIT
-cp -R "$here/org-setup/." "$org_setup"
 # The apps must exist before their policies and the handler registration.
-(cd "$org_setup" && sf project deploy start --target-org "$target_org" --wait 30 \
+(cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 \
   -m Role -m CustomMetadata -m RemoteSiteSetting -m ExternalClientApplication \
   -m ExtlClntAppOauthSettings -m ExtlClntAppGlobalOauthSettings)
-(cd "$org_setup" && sf project deploy start --target-org "$target_org" --wait 30 \
+(cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 \
   -m ExtlClntAppOauthConfigurablePolicies -m OauthTokenExchangeHandler)
 
 step "Getting the apps' consumer keys"
