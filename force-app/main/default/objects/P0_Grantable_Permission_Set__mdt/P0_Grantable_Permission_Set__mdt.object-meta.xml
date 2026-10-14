@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Permission sets that P0 may grant to agent users.</description>
+    <label>P0 Grantable Permission Set</label>
+    <pluralLabel>P0 Grantable Permission Sets</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

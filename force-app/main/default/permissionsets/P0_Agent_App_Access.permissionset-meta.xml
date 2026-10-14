@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Lets an agent user use the P0 agent app while it holds any grant. P0 assigns and removes it.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>P0 Agent App Access</label>
+</PermissionSet>

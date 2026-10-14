@@ -1,0 +1,31 @@
+{
+  "packageDirectories": [
+    {
+      "path": "force-app",
+      "default": true
+    }
+  ],
+  "sourceApiVersion": "64.0",
+  "replacements": [
+    {
+      "glob": "force-app/**/*.xml",
+      "stringToReplace": "%P0_GATEWAY_ISSUER%",
+      "replaceWithEnv": "P0_GATEWAY_ISSUER"
+    },
+    {
+      "glob": "force-app/**/*.xml",
+      "stringToReplace": "%P0_PROVISIONER_USERNAME%",
+      "replaceWithEnv": "P0_PROVISIONER_USERNAME"
+    },
+    {
+      "glob": "force-app/**/*.xml",
+      "stringToReplace": "%P0_CONTACT_EMAIL%",
+      "replaceWithEnv": "P0_CONTACT_EMAIL"
+    },
+    {
+      "glob": "force-app/**/*.xml",
+      "stringToReplace": "%P0_HANDLER_USERNAME%",
+      "replaceWithEnv": "P0_HANDLER_USERNAME"
+    }
+  ]
+}
