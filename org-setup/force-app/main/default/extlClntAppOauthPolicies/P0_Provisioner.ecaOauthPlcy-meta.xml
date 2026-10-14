@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtlClntAppOauthConfigurablePolicies xmlns="http://soap.sforce.com/2006/04/metadata">
+    <clientCredentialsFlowUser>%P0_PROVISIONER_USERNAME%</clientCredentialsFlowUser>
+    <commaSeparatedPermissionSet>P0_Agent_Provisioner</commaSeparatedPermissionSet>
+    <externalClientApplication>P0_Provisioner</externalClientApplication>
+    <ipRelaxationPolicyType>Enforce</ipRelaxationPolicyType>
+    <isClientCredentialsFlowEnabled>true</isClientCredentialsFlowEnabled>
+    <isGuestCodeCredFlowEnabled>false</isGuestCodeCredFlowEnabled>
+    <isTokenExchangeFlowEnabled>false</isTokenExchangeFlowEnabled>
+    <label>P0 Provisioner</label>
+    <permittedUsersPolicyType>AdminApprovedPreAuthorized</permittedUsersPolicyType>
+    <refreshTokenPolicyType>SpecificLifetime</refreshTokenPolicyType>
+    <refreshTokenValidityPeriod>1</refreshTokenValidityPeriod>
+    <refreshTokenValidityUnit>Days</refreshTokenValidityUnit>
+    <requiredSessionLevel>STANDARD</requiredSessionLevel>
+</ExtlClntAppOauthConfigurablePolicies>

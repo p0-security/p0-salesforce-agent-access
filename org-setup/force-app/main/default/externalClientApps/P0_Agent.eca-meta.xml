@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExternalClientApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contactEmail>%P0_CONTACT_EMAIL%</contactEmail>
+    <description>P0 agents exchange gateway tokens for sessions of their own users.</description>
+    <distributionState>Local</distributionState>
+    <isProtected>false</isProtected>
+    <label>P0 Agent</label>
+</ExternalClientApplication>

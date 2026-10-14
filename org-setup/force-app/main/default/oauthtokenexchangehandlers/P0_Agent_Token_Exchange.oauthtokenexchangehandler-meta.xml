@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OauthTokenExchangeHandler xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Exchanges P0 gateway tokens for sessions of P0 agent users</description>
+    <developerName>P0_Agent_Token_Exchange</developerName>
+    <enablements>
+        <apexExecutionUser>%P0_HANDLER_USERNAME%</apexExecutionUser>
+        <externalClientApp>P0_Agent</externalClientApp>
+        <isDefault>true</isDefault>
+    </enablements>
+    <isAccessTokenSupported>false</isAccessTokenSupported>
+    <isEnabled>true</isEnabled>
+    <isIdTokenSupported>false</isIdTokenSupported>
+    <isJwtSupported>true</isJwtSupported>
+    <isRefreshTokenSupported>false</isRefreshTokenSupported>
+    <isSaml2Supported>false</isSaml2Supported>
+    <isUserCreationAllowed>false</isUserCreationAllowed>
+    <masterLabel>P0 Agent Token Exchange</masterLabel>
+    <tokenHandlerApex>P0AgentTokenExchangeHandler</tokenHandlerApex>
+</OauthTokenExchangeHandler>
