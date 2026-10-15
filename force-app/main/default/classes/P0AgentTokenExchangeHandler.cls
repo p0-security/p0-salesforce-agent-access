@@ -39,18 +39,19 @@ public without sharing class P0AgentTokenExchangeHandler extends Auth.Oauth2Toke
         return users.isEmpty() ? null : users[0];
     }
 
-    /** @return the agent username, or null when iss, aud or sid does not match */
+    /** @return the agent username, or null when iss, aud or sub does not match */
     @TestVisible
     private static String usernameFrom(Map<String, Object> claims, String issuer, String audience) {
-        // The gateway always signs sid, its session id, on the token it mints.
-        Object sid = claims.get('sid');
+        // The gateway sets sub to the MCP server and the session it mints the
+        // token for, and P0 grants to the same subject.
+        Object sub = claims.get('sub');
         Object iss = claims.get('iss');
         if (!(iss instanceof String) || ((String) iss).removeEnd('/') != issuer
                 || !audienceMatches(claims.get('aud'), audience)
-                || !(sid instanceof String) || String.isBlank((String) sid)) {
+                || !(sub instanceof String) || String.isBlank((String) sub)) {
             return null;
         }
-        return P0AgentSettings.agentUsername(P0AgentSettings.agentKey(issuer, (String) sid));
+        return P0AgentSettings.agentUsername(P0AgentSettings.agentKey(issuer, (String) sub));
     }
 
     @TestVisible

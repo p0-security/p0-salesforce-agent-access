@@ -36,11 +36,11 @@ public without sharing class P0AgentSettings {
         return names;
     }
 
-    /** The key of the agent user for one gateway session. P0 makes the same key
-     * from the request's gateway issuer and session id.
+    /** The key of the agent user for one gateway subject. P0 makes the same key
+     * from the request's gateway issuer and subject.
      * @param issuer the gateway's issuer URL, without a trailing slash */
-    public static String agentKey(String issuer, String sessionId) {
-        Blob digest = Crypto.generateDigest('SHA-256', Blob.valueOf(issuer + '\n' + sessionId));
+    public static String agentKey(String issuer, String subject) {
+        Blob digest = Crypto.generateDigest('SHA-256', Blob.valueOf(issuer + '\n' + subject));
         return EncodingUtil.convertToHex(digest).left(24);
     }
 
