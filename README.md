@@ -30,8 +30,6 @@ Salesforce source for P0 agent access. P0 provisions an API-only user for each a
 
 A new external client app can take up to 10 minutes to work; until then the token exchange answers `access_denied`.
 
-The gateway must allow the `sf_agent_key` claim: add it to `NATIVE_CREDENTIAL_ALLOWED_CLAIMS`.
-
 ## Test
 
 ```sh

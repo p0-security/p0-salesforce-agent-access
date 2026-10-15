@@ -5,18 +5,26 @@ private class P0AgentTokenExchangeHandlerTest {
     private static final String ISSUER = 'https://gateway.test';
     private static final String AUDIENCE = 'https://org.test';
 
-    private static final String USERNAME = P0AgentSettings.agentUsername('abc123');
+    // P0's agentKeyOf test makes the same key from the same issuer and session id.
+    private static final String AGENT_KEY = '478ca25a5f6b968d4b045de7';
+    private static final String USERNAME = P0AgentSettings.agentUsername(AGENT_KEY);
 
     private static Map<String, Object> claims(Map<String, Object> overrides) {
         Map<String, Object> claims = new Map<String, Object>{
-            'iss' => ISSUER, 'aud' => AUDIENCE, 'sf_agent_key' => 'abc123'
+            'iss' => ISSUER, 'aud' => AUDIENCE, 'sid' => 'sid-1'
         };
         claims.putAll(overrides);
         return claims;
     }
 
     @IsTest
-    static void makesTheUsernameFromTheAgentKey() {
+    static void makesTheSameAgentKeyAsP0() {
+        Assert.areEqual(AGENT_KEY, P0AgentSettings.agentKey(ISSUER, 'sid-1'));
+        Assert.areEqual('f5ff279d250e1c5ca4cd122d', P0AgentSettings.agentKey(ISSUER, 'sid-2'));
+    }
+
+    @IsTest
+    static void makesTheUsernameFromTheSessionId() {
         Assert.areEqual(USERNAME,
             P0AgentTokenExchangeHandler.usernameFrom(claims(new Map<String, Object>()), ISSUER, AUDIENCE));
     }
@@ -36,25 +44,26 @@ private class P0AgentTokenExchangeHandlerTest {
     }
 
     @IsTest
-    static void refusesAnotherIssuerAudienceOrAgentKey() {
+    static void refusesAnotherIssuerAudienceOrSessionId() {
         Assert.isNull(P0AgentTokenExchangeHandler.usernameFrom(
             claims(new Map<String, Object>{ 'iss' => 'https://attacker.test' }), ISSUER, AUDIENCE));
         Assert.isNull(P0AgentTokenExchangeHandler.usernameFrom(
             claims(new Map<String, Object>{ 'aud' => 'https://other.test' }), ISSUER, AUDIENCE));
         Assert.isNull(P0AgentTokenExchangeHandler.usernameFrom(
-            claims(new Map<String, Object>{ 'sf_agent_key' => '' }), ISSUER, AUDIENCE));
+            claims(new Map<String, Object>{ 'sid' => '' }), ISSUER, AUDIENCE));
         Assert.isNull(P0AgentTokenExchangeHandler.usernameFrom(
-            claims(new Map<String, Object>{ 'sf_agent_key' => 'Admin@other.test' }), ISSUER, AUDIENCE));
-        Assert.isNull(P0AgentTokenExchangeHandler.usernameFrom(
-            claims(new Map<String, Object>{ 'sf_agent_key' => 42 }), ISSUER, AUDIENCE));
+            claims(new Map<String, Object>{ 'sid' => 42 }), ISSUER, AUDIENCE));
+        Map<String, Object> noSid = claims(new Map<String, Object>());
+        noSid.remove('sid');
+        Assert.isNull(P0AgentTokenExchangeHandler.usernameFrom(noSid, ISSUER, AUDIENCE));
     }
 
     @IsTest
     static void decodesTheTokenPayload() {
-        String payload = EncodingUtil.base64Encode(Blob.valueOf('{"sf_agent_key":"abc123"}'))
+        String payload = EncodingUtil.base64Encode(Blob.valueOf('{"sid":"sid-1"}'))
             .replace('+', '-').replace('/', '_').remove('=');
         Map<String, Object> decoded = P0AgentTokenExchangeHandler.claimsOf('e30.' + payload + '.sig');
-        Assert.areEqual('abc123', decoded.get('sf_agent_key'));
+        Assert.areEqual('sid-1', decoded.get('sid'));
     }
 
     @IsTest

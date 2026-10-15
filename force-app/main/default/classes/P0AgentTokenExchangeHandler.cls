@@ -2,9 +2,6 @@
 // Register it for the agent app with an OauthTokenExchangeHandler (see org-setup).
 public without sharing class P0AgentTokenExchangeHandler extends Auth.Oauth2TokenExchangeHandler {
 
-    // The gateway's subject is a per-session hash; its claims template sets this claim.
-    @TestVisible private static final String AGENT_KEY_CLAIM = 'sf_agent_key';
-
     public override Auth.TokenValidationResult validateIncomingToken(
             String appDeveloperName, Auth.IntegratingAppType appType,
             String incomingToken, Auth.OAuth2TokenExchangeType tokenType) {
@@ -42,17 +39,18 @@ public without sharing class P0AgentTokenExchangeHandler extends Auth.Oauth2Toke
         return users.isEmpty() ? null : users[0];
     }
 
-    /** @return the agent username, or null when iss, aud or the claim does not match */
+    /** @return the agent username, or null when iss, aud or sid does not match */
     @TestVisible
     private static String usernameFrom(Map<String, Object> claims, String issuer, String audience) {
-        Object agentKey = claims.get(AGENT_KEY_CLAIM);
+        // The gateway always signs sid, its session id, on the token it mints.
+        Object sid = claims.get('sid');
         Object iss = claims.get('iss');
         if (!(iss instanceof String) || ((String) iss).removeEnd('/') != issuer
                 || !audienceMatches(claims.get('aud'), audience)
-                || !(agentKey instanceof String)) {
+                || !(sid instanceof String) || String.isBlank((String) sid)) {
             return null;
         }
-        return P0AgentSettings.agentUsername((String) agentKey);
+        return P0AgentSettings.agentUsername(P0AgentSettings.agentKey(issuer, (String) sid));
     }
 
     @TestVisible
