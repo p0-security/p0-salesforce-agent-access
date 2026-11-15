@@ -30,8 +30,6 @@ Salesforce source for P0 agent access. P0 provisions an API-only user for each a
 4. Turn on Setup > User Interface > Enable MCP Service, and activate the hosted MCP servers that agents use.
 5. In P0, install the org in the Salesforce (AI) integration (`salesforce-ai`). P0 gives you Terraform that deploys its connector to Cloud Run in your Google Cloud project, and a command that stores the `P0 Provisioner` app's consumer secret (from Setup) in your Secret Manager. Then enter the values that the script printed. Then add the Salesforce MCP server with the "Token exchange (RFC 8693)" credential. One server serves every installed org: the server definition reads each grant's org from `generated.tokenExchange`.
 
-To upgrade an existing org, pull and run the script again right after the deploy, with the same `--gateway-issuer` (once per gateway). The old `Gateway Issuer` field of the `Default` record is no longer read, and the handler trusts only `P0 Gateway Issuer` records, so token exchange fails until one exists.
-
 A new external client app can take up to 10 minutes to work; until then the token exchange answers `access_denied`.
 
 ## Test
