@@ -68,6 +68,10 @@ for username in "$provisioner" "$handler"; do
   fi
 done
 
+step "Deploying the agent profile"
+# The package's tests and its facade look the profile up by name, so it comes first.
+(cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 -m Profile)
+
 step "Deploying the package source"
 # Runs only the package's tests, so tests elsewhere in the org cannot block it.
 # The facade tests make agent users, so the org needs a free Salesforce

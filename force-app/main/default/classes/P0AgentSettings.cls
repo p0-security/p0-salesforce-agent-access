@@ -2,7 +2,8 @@
 // and the grantable list in P0_Grantable_Permission_Set__mdt.
 public without sharing class P0AgentSettings {
 
-    public static final String AGENT_PROFILE = 'Salesforce API Only System Integrations';
+    // Created by org-setup. It holds no data access, so a grant's permission sets are all an agent gets.
+    public static final String AGENT_PROFILE = 'P0 Agent API Only';
     public static final String APP_ACCESS_PERMISSION_SET = 'P0_Agent_App_Access';
     private static final Pattern AGENT_KEY = Pattern.compile('[a-z0-9][a-z0-9-]{0,39}');
 
