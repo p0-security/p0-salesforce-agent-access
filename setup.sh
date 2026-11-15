@@ -125,37 +125,29 @@ else
 fi
 
 step "Deploying the org setup"
-# The Default record and the P0_Gateway remote site hold the first gateway: the one
-# an earlier run set, or this one in a new org. Another gateway gets a record and a
-# remote site of its own, so running again with a new issuer adds to the first.
-default_issuer="$(query "SELECT Gateway_Issuer__c FROM P0_Agent_Setting__mdt WHERE DeveloperName = 'Default'" \
-  | jq -r '.[0].Gateway_Issuer__c // empty')"
-default_issuer="${default_issuer%/}"
-if [[ -z "$default_issuer" ]]; then default_issuer="$gateway_issuer"; fi
-export P0_GATEWAY_ISSUER="$default_issuer" \
-  P0_PROVISIONER_USERNAME="$provisioner" \
+export P0_PROVISIONER_USERNAME="$provisioner" \
   P0_HANDLER_USERNAME="$handler" \
   P0_CONTACT_EMAIL="$contact"
 # The apps must exist before their policies and the handler registration.
 (cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 \
-  -m Role -m CustomMetadata -m RemoteSiteSetting -m ExternalClientApplication \
+  -m Role -m CustomMetadata -m ExternalClientApplication \
   -m ExtlClntAppOauthSettings -m ExtlClntAppGlobalOauthSettings)
 (cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 \
   -m ExtlClntAppOauthConfigurablePolicies -m OauthTokenExchangeHandler)
 
-if [[ "$gateway_issuer" == "$default_issuer" ]]; then
-  echo "Gateway $gateway_issuer is the org's first gateway"
-else
-  # Metadata file names cannot come from replacements, so render these files here.
-  records="$(query "SELECT DeveloperName, Issuer__c FROM P0_Gateway_Issuer__mdt")"
-  name="$(issuer_record_name "$gateway_issuer" "$records")"
-  echo "Adding gateway $gateway_issuer as P0_Gateway_Issuer.$name"
-  extra="$(mktemp -d)"
-  trap 'rm -rf "$extra"' EXIT
-  mkdir -p "$extra/force-app/main/default/customMetadata" "$extra/force-app/main/default/remoteSiteSettings"
-  echo '{"packageDirectories":[{"path":"force-app","default":true}],"sourceApiVersion":"64.0"}' \
-    >"$extra/sfdx-project.json"
-  cat >"$extra/force-app/main/default/customMetadata/P0_Gateway_Issuer.$name.md-meta.xml" <<XML
+step "Trusting the gateway"
+# The handler trusts only the P0_Gateway_Issuer records, and Apex may call only a
+# remote site, so each gateway gets both. Metadata file names cannot come from
+# replacements, so render these files here.
+records="$(query "SELECT DeveloperName, Issuer__c FROM P0_Gateway_Issuer__mdt")"
+name="$(issuer_record_name "$gateway_issuer" "$records")"
+echo "Gateway $gateway_issuer is P0_Gateway_Issuer.$name"
+extra="$(mktemp -d)"
+trap 'rm -rf "$extra"' EXIT
+mkdir -p "$extra/force-app/main/default/customMetadata" "$extra/force-app/main/default/remoteSiteSettings"
+echo '{"packageDirectories":[{"path":"force-app","default":true}],"sourceApiVersion":"64.0"}' \
+  >"$extra/sfdx-project.json"
+cat >"$extra/force-app/main/default/customMetadata/P0_Gateway_Issuer.$name.md-meta.xml" <<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
     <label>$name</label>
@@ -166,7 +158,7 @@ else
     </values>
 </CustomMetadata>
 XML
-  cat >"$extra/force-app/main/default/remoteSiteSettings/P0_Gateway_$name.remoteSite-meta.xml" <<XML
+cat >"$extra/force-app/main/default/remoteSiteSettings/P0_Gateway_$name.remoteSite-meta.xml" <<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <RemoteSiteSetting xmlns="http://soap.sforce.com/2006/04/metadata">
     <description>A P0 agentic gateway, for its JWKS</description>
@@ -175,8 +167,7 @@ XML
     <url>$gateway_issuer</url>
 </RemoteSiteSetting>
 XML
-  (cd "$extra" && sf project deploy start --target-org "$target_org" --wait 30 --source-dir force-app)
-fi
+(cd "$extra" && sf project deploy start --target-org "$target_org" --wait 30 --source-dir force-app)
 
 step "Getting the apps' consumer keys"
 values="$("$here/org-values.sh" "$target_org")"

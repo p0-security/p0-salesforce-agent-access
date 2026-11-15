@@ -3,7 +3,7 @@
 Salesforce source for P0 agent access. P0 provisions an API-only user for each agent session through `P0AgentFacade`. The P0 agentic gateway exchanges its own token for a session of that user through `P0AgentTokenExchangeHandler`.
 
 - `force-app/` holds what can go in a Salesforce package: the facade, the token-exchange handler, their settings and tests, the grantable-list, settings and gateway-issuer metadata types, and the `P0_Agent_App_Access` and `P0_Agent_Provisioner` permission sets.
-- `org-setup/` holds what Salesforce cannot package, because it is per org: the `P0_Agents` role, the `P0 Agent` and `P0 Provisioner` external client apps, the token-exchange handler registration, the gateways' remote sites, and the `Default` settings record. Deploy-time replacements in its `sfdx-project.json` fill in the values.
+- `org-setup/` holds what Salesforce cannot package, because it is per org: the `P0_Agents` role, the `P0 Agent` and `P0 Provisioner` external client apps, the token-exchange handler registration, and the `Default` settings record. Deploy-time replacements in its `sfdx-project.json` fill in the values.
 - `setup.sh` installs both in an org. `org-values.sh` prints, as JSON, the values that P0 asks for.
 
 ## Install in an org
@@ -23,14 +23,14 @@ Salesforce source for P0 agent access. P0 provisions an API-only user for each a
 
    To print the values again later, run `./org-values.sh <alias>`.
 
-   An org can trust several gateways. The `Default` record and the `P0_Gateway` remote site hold the first one. Run the script again with another `--gateway-issuer` to add a gateway: it creates a `P0 Gateway Issuer` record and a remote site for it, and leaves the others as they are. Running it again with the same issuer changes nothing. The handler trusts a token only when its `iss` equals one of these issuers, and an agent is a different user behind each gateway. To stop trusting a gateway, delete its `P0 Gateway Issuer` record (Setup > Custom Metadata Types) and its remote site; to replace the first one, edit the `Default` record.
+   The handler trusts only the gateways in `P0 Gateway Issuer` records, so the script makes a record and a `P0_Gateway_<name>` remote site (for the gateway's JWKS) for the `--gateway-issuer`. The handler accepts a token only when its `iss` equals one of these issuers, and an agent is a different user behind each gateway. To trust a second gateway, run the script again with its URL; running it again with the same issuer changes nothing. To stop trusting a gateway, delete its record (Setup > Custom Metadata Types) and its remote site.
 
    The package's tests make agent users, so the org needs a free Salesforce Integration licence.
 3. Add a `P0 Grantable Permission Set` record for each permission set that agents may request. Agent users have the Salesforce Integration licence, so a set with object permissions must use the `Salesforce API Integration` permission set licence. The facade refuses sets with Modify All Data, View All Data, Manage Users, Author Apex, Customize Application, or Manage Profiles and Permission Sets.
 4. Turn on Setup > User Interface > Enable MCP Service, and activate the hosted MCP servers that agents use.
 5. In P0, install the org in the Salesforce (AI) integration (`salesforce-ai`). P0 gives you Terraform that deploys its connector to Cloud Run in your Google Cloud project, and a command that stores the `P0 Provisioner` app's consumer secret (from Setup) in your Secret Manager. Then enter the values that the script printed. Then add the Salesforce MCP server with the "Token exchange (RFC 8693)" credential. One server serves every installed org: the server definition reads each grant's org from `generated.tokenExchange`.
 
-To upgrade an org that has one gateway, pull and run the script again with the same `--gateway-issuer`. Nothing needs to migrate.
+To upgrade an existing org, pull and run the script again right after the deploy, with the same `--gateway-issuer` (once per gateway). The old `Gateway Issuer` field of the `Default` record is no longer read, and the handler trusts only `P0 Gateway Issuer` records, so token exchange fails until one exists.
 
 A new external client app can take up to 10 minutes to work; until then the token exchange answers `access_denied`.
 

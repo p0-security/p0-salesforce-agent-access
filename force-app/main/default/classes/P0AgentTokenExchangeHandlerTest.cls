@@ -12,10 +12,9 @@ private class P0AgentTokenExchangeHandlerTest {
     private static final String USERNAME = P0AgentSettings.agentUsername(AGENT_KEY);
     private static final String USERNAME_TWO = P0AgentSettings.agentUsername('7b2bd530e2ffd2f6b71d9515');
 
-    private static void trust(String defaultIssuer, List<String> extraIssuers) {
-        P0AgentSettings.settingOverride = new P0_Agent_Setting__mdt(
-            Agent_Role__c = ROLE, Gateway_Issuer__c = defaultIssuer);
-        P0AgentSettings.extraIssuersOverride = extraIssuers;
+    private static void trust(List<String> issuers) {
+        P0AgentSettings.settingOverride = new P0_Agent_Setting__mdt(Agent_Role__c = ROLE);
+        P0AgentSettings.issuersOverride = issuers;
     }
 
     // The payload is not signed by anyone.
@@ -78,8 +77,8 @@ private class P0AgentTokenExchangeHandlerTest {
     }
 
     @IsTest
-    static void aLegacyOrgTrustsOnlyTheDefaultIssuer() {
-        trust(ISSUER + '/', new List<String>());
+    static void anOrgWithOneRecordTrustsOnlyThatIssuer() {
+        trust(new List<String>{ ISSUER + '/' });
         Set<String> trusted = P0AgentSettings.gatewayIssuers();
 
         Assert.areEqual(ISSUER, P0AgentTokenExchangeHandler.trustedIssuer(
@@ -89,8 +88,30 @@ private class P0AgentTokenExchangeHandlerTest {
     }
 
     @IsTest
+    static void anOrgWithNoRecordsRejectsEveryTokenBeforeAnyJwksFetch() {
+        trust(new List<String>());
+        Set<String> trusted = P0AgentSettings.gatewayIssuers();
+
+        Assert.isNull(P0AgentTokenExchangeHandler.trustedIssuer(claims(new Map<String, Object>()), trusted));
+        Auth.TokenValidationResult result = new P0AgentTokenExchangeHandler().validateIncomingToken(
+            'P0_Agent', null, unsignedToken(claims(new Map<String, Object>())),
+            Auth.OAuth2TokenExchangeType.JWT);
+        Assert.isFalse(result.isValid());
+    }
+
+    @IsTest
+    static void doesNotTrustTheDefaultRecordsGatewayIssuer() {
+        P0AgentSettings.settingOverride = new P0_Agent_Setting__mdt(
+            Agent_Role__c = ROLE, Gateway_Issuer__c = ISSUER);
+        P0AgentSettings.issuersOverride = new List<String>{ ISSUER_TWO };
+
+        Assert.isNull(P0AgentTokenExchangeHandler.trustedIssuer(
+            claims(new Map<String, Object>()), P0AgentSettings.gatewayIssuers()));
+    }
+
+    @IsTest
     static void acceptsASecondIssuerAndMakesItsOwnAgentUsername() {
-        trust(ISSUER, new List<String>{ ISSUER_TWO + '/' });
+        trust(new List<String>{ ISSUER, ISSUER_TWO + '/' });
         Set<String> trusted = P0AgentSettings.gatewayIssuers();
         Map<String, Object> second = claims(new Map<String, Object>{ 'iss' => ISSUER_TWO });
 
@@ -129,7 +150,7 @@ private class P0AgentTokenExchangeHandlerTest {
     // unknown issuer returns before that. Test code cannot observe the callout itself.
     @IsTest
     static void refusesAnUnknownIssuerBeforeAnyJwksFetch() {
-        trust(ISSUER, new List<String>{ ISSUER_TWO });
+        trust(new List<String>{ ISSUER, ISSUER_TWO });
         Auth.TokenValidationResult result = new P0AgentTokenExchangeHandler().validateIncomingToken(
             'P0_Agent', null,
             unsignedToken(claims(new Map<String, Object>{ 'iss' => 'https://attacker.test' })),
@@ -157,7 +178,7 @@ private class P0AgentTokenExchangeHandlerTest {
 
     @IsTest
     static void refusesAJwtItCannotVerify() {
-        trust(ISSUER, new List<String>());
+        trust(new List<String>{ ISSUER });
         Auth.TokenValidationResult result = new P0AgentTokenExchangeHandler().validateIncomingToken(
             'P0_Agent', null, 'e30.e30.sig', Auth.OAuth2TokenExchangeType.JWT);
         Assert.isFalse(result.isValid());
@@ -165,8 +186,7 @@ private class P0AgentTokenExchangeHandlerTest {
 
     @IsTest
     static void mapsOnlyActiveUsersInTheAgentRoleAndProfile() {
-        P0AgentSettings.settingOverride = new P0_Agent_Setting__mdt(
-            Agent_Role__c = ROLE, Gateway_Issuer__c = ISSUER);
+        trust(new List<String>{ ISSUER });
         UserRole role = new UserRole(DeveloperName = ROLE, Name = 'P0 Test Agents');
         insert role;
         User agent = new User(
