@@ -39,10 +39,11 @@ public without sharing class P0AgentSettings {
         }
         Set<String> issuers = new Set<String>();
         for (String issuer : configured) {
-            if (issuer == null) continue;
-            String normalized = issuer.removeEnd('/');
-            if (normalized.startsWith('https://') && normalized.length() > 'https://'.length()) {
+            String normalized = issuer == null ? null : issuer.removeEnd('/');
+            if (normalized != null && normalized.startsWith('https://') && normalized.length() > 'https://'.length()) {
                 issuers.add(normalized);
+            } else {
+                System.debug(LoggingLevel.WARN, 'Ignoring gateway issuer that is not a lowercase https URL: ' + issuer);
             }
         }
         return issuers;

@@ -45,13 +45,16 @@ private class P0AgentSettingsTest {
         Assert.areEqual(new Set<String>{ 'https://gateway-four.test' }, P0AgentSettings.gatewayIssuers());
     }
 
+    // Only as strong as the records in the org, because tests cannot create custom metadata.
     @IsTest
     static void readsTheIssuersFromCustomMetadata() {
-        Set<String> issuers = P0AgentSettings.gatewayIssuers();
+        Set<String> expected = new Set<String>();
         for (P0_Gateway_Issuer__mdt row : P0_Gateway_Issuer__mdt.getAll().values()) {
-            if (row.Issuer__c.startsWith('https://')) Assert.isTrue(issuers.contains(row.Issuer__c.removeEnd('/')));
+            String issuer = row.Issuer__c.removeEnd('/');
+            if (issuer.startsWith('https://') && issuer.length() > 'https://'.length()) expected.add(issuer);
         }
-        Assert.isTrue(issuers.size() <= P0_Gateway_Issuer__mdt.getAll().size());
+
+        Assert.areEqual(expected, P0AgentSettings.gatewayIssuers());
     }
 
     @IsTest

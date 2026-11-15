@@ -87,6 +87,7 @@ private class P0AgentTokenExchangeHandlerTest {
             claims(new Map<String, Object>{ 'iss' => ISSUER_TWO }), trusted));
     }
 
+    // Same limit as refusesAnUnknownIssuerBeforeAnyJwksFetch: the callout itself is not observed.
     @IsTest
     static void anOrgWithNoRecordsRejectsEveryTokenBeforeAnyJwksFetch() {
         trust(new List<String>());
@@ -147,7 +148,9 @@ private class P0AgentTokenExchangeHandlerTest {
     }
 
     // validateIncomingToken fetches a JWKS only for the issuer that trustedIssuer returns, and an
-    // unknown issuer returns before that. Test code cannot observe the callout itself.
+    // unknown issuer returns before that. This cannot tell that early return from a callout that
+    // failed: Test.setMock is ignored by Auth.JWTUtil, and no Auth.HttpCalloutMockUtil method
+    // that takes a mock compiles in this org (API v64 and v68). The trustedIssuer asserts pin it.
     @IsTest
     static void refusesAnUnknownIssuerBeforeAnyJwksFetch() {
         trust(new List<String>{ ISSUER, ISSUER_TWO });
@@ -177,10 +180,13 @@ private class P0AgentTokenExchangeHandlerTest {
     }
 
     @IsTest
-    static void refusesAJwtItCannotVerify() {
+    static void refusesATokenFromATrustedIssuerWhenTheKeyCheckFails() {
+        // The trusted iss gets past trustedIssuer, so this reaches validateJWTWithKeysEndpoint.
+        // Tests cannot call out, and the token is unsigned, so that call throws: still invalid.
         trust(new List<String>{ ISSUER });
         Auth.TokenValidationResult result = new P0AgentTokenExchangeHandler().validateIncomingToken(
-            'P0_Agent', null, 'e30.e30.sig', Auth.OAuth2TokenExchangeType.JWT);
+            'P0_Agent', null, unsignedToken(claims(new Map<String, Object>())),
+            Auth.OAuth2TokenExchangeType.JWT);
         Assert.isFalse(result.isValid());
     }
 

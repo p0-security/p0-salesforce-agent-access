@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>An additional P0 agentic gateway that this org trusts, beside the one in the P0 Agent Setting Default record.</description>
+    <description>A P0 agentic gateway that this org trusts. These records are the only gateways the org trusts.</description>
     <label>P0 Gateway Issuer</label>
     <pluralLabel>P0 Gateway Issuers</pluralLabel>
     <visibility>Public</visibility>

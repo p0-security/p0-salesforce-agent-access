@@ -76,18 +76,26 @@ issuer_hash() {
   printf '%s' "$1" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -c1-8
 }
 
+# An issuer without any trailing slashes, so one gateway always has one record.
+issuer_normalize() {
+  local issuer="$1"
+  while [[ "$issuer" == */ ]]; do issuer="${issuer%/}"; done
+  printf '%s' "$issuer"
+}
+
 # The developer name of the P0_Gateway_Issuer record for an issuer. Reuses the name of
 # a record that already holds the issuer, so running again changes nothing. Otherwise
 # takes the slug, and adds a hash of the issuer when another issuer has that name.
 # $1 the issuer, $2 the org's records as JSON: [{"DeveloperName": ..., "Issuer__c": ...}]
 issuer_record_name() {
-  local existing slug
-  existing="$(jq -r --arg issuer "$1" \
-    '[.[] | select(((.Issuer__c // "") | rtrimstr("/")) == $issuer) | .DeveloperName][0] // empty' <<<"$2")"
+  local issuer existing slug
+  issuer="$(issuer_normalize "$1")"
+  existing="$(jq -r --arg issuer "$issuer" \
+    '[.[] | select(((.Issuer__c // "") | sub("/+$"; "")) == $issuer) | .DeveloperName][0] // empty' <<<"$2")"
   if [[ -n "$existing" ]]; then printf '%s' "$existing"; return; fi
-  slug="$(issuer_slug "$1")"
+  slug="$(issuer_slug "$issuer")"
   if jq -e --arg name "$slug" 'any(.[]; (.DeveloperName | ascii_downcase) == $name)' <<<"$2" >/dev/null; then
-    slug="${slug}_$(issuer_hash "$1")"
+    slug="${slug}_$(issuer_hash "$issuer")"
   fi
   printf '%s' "$slug"
 }
@@ -139,9 +147,10 @@ step "Trusting the gateway"
 # The handler trusts only the P0_Gateway_Issuer records, and Apex may call only a
 # remote site, so each gateway gets both. Metadata file names cannot come from
 # replacements, so render these files here.
+issuer="$(issuer_normalize "$gateway_issuer")"
 records="$(query "SELECT DeveloperName, Issuer__c FROM P0_Gateway_Issuer__mdt")"
-name="$(issuer_record_name "$gateway_issuer" "$records")"
-echo "Gateway $gateway_issuer is P0_Gateway_Issuer.$name"
+name="$(issuer_record_name "$issuer" "$records")"
+echo "Gateway $issuer is P0_Gateway_Issuer.$name"
 extra="$(mktemp -d)"
 trap 'rm -rf "$extra"' EXIT
 mkdir -p "$extra/force-app/main/default/customMetadata" "$extra/force-app/main/default/remoteSiteSettings"
@@ -154,7 +163,7 @@ cat >"$extra/force-app/main/default/customMetadata/P0_Gateway_Issuer.$name.md-me
     <protected>false</protected>
     <values>
         <field>Issuer__c</field>
-        <value xsi:type="xsd:string">$gateway_issuer</value>
+        <value xsi:type="xsd:string">$issuer</value>
     </values>
 </CustomMetadata>
 XML
@@ -164,7 +173,7 @@ cat >"$extra/force-app/main/default/remoteSiteSettings/P0_Gateway_$name.remoteSi
     <description>A P0 agentic gateway, for its JWKS</description>
     <disableProtocolSecurity>false</disableProtocolSecurity>
     <isActive>true</isActive>
-    <url>$gateway_issuer</url>
+    <url>$issuer</url>
 </RemoteSiteSetting>
 XML
 (cd "$extra" && sf project deploy start --target-org "$target_org" --wait 30 --source-dir force-app)
