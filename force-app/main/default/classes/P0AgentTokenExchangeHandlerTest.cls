@@ -3,12 +3,29 @@ private class P0AgentTokenExchangeHandlerTest {
 
     private static final String ROLE = 'P0_Test_Agents';
     private static final String ISSUER = 'https://gateway.test';
+    private static final String ISSUER_TWO = 'https://gateway-two.test';
     private static final String AUDIENCE = 'https://org.test';
 
     // P0's agentKeyOf test makes the same key from the same issuer and subject.
     private static final String AGENT_KEY = 'b54e2fa2dcc5dace6fa68695';
     private static final String SUBJECT = 'mcps/salesforce/1111111111111111';
     private static final String USERNAME = P0AgentSettings.agentUsername(AGENT_KEY);
+    private static final String USERNAME_TWO = P0AgentSettings.agentUsername('7b2bd530e2ffd2f6b71d9515');
+
+    private static void trust(String defaultIssuer, List<String> extraIssuers) {
+        P0AgentSettings.settingOverride = new P0_Agent_Setting__mdt(
+            Agent_Role__c = ROLE, Gateway_Issuer__c = defaultIssuer);
+        P0AgentSettings.extraIssuersOverride = extraIssuers;
+    }
+
+    // The payload is not signed by anyone.
+    private static String unsignedToken(Map<String, Object> claims) {
+        return 'e30.' + base64Url(JSON.serialize(claims)) + '.sig';
+    }
+
+    private static String base64Url(String text) {
+        return EncodingUtil.base64Encode(Blob.valueOf(text)).replace('+', '-').replace('/', '_').remove('=');
+    }
 
     private static Map<String, Object> claims(Map<String, Object> overrides) {
         Map<String, Object> claims = new Map<String, Object>{
@@ -61,6 +78,69 @@ private class P0AgentTokenExchangeHandlerTest {
     }
 
     @IsTest
+    static void aLegacyOrgTrustsOnlyTheDefaultIssuer() {
+        trust(ISSUER + '/', new List<String>());
+        Set<String> trusted = P0AgentSettings.gatewayIssuers();
+
+        Assert.areEqual(ISSUER, P0AgentTokenExchangeHandler.trustedIssuer(
+            claims(new Map<String, Object>()), trusted));
+        Assert.isNull(P0AgentTokenExchangeHandler.trustedIssuer(
+            claims(new Map<String, Object>{ 'iss' => ISSUER_TWO }), trusted));
+    }
+
+    @IsTest
+    static void acceptsASecondIssuerAndMakesItsOwnAgentUsername() {
+        trust(ISSUER, new List<String>{ ISSUER_TWO + '/' });
+        Set<String> trusted = P0AgentSettings.gatewayIssuers();
+        Map<String, Object> second = claims(new Map<String, Object>{ 'iss' => ISSUER_TWO });
+
+        String matched = P0AgentTokenExchangeHandler.trustedIssuer(second, trusted);
+        Assert.areEqual(ISSUER_TWO, matched);
+        // The same subject is a different agent behind each gateway.
+        Assert.areEqual(USERNAME_TWO, P0AgentTokenExchangeHandler.usernameFrom(second, matched, AUDIENCE));
+        Assert.areNotEqual(USERNAME,
+            P0AgentTokenExchangeHandler.usernameFrom(second, matched, AUDIENCE));
+        // A token from one gateway never passes as the other.
+        Assert.isNull(P0AgentTokenExchangeHandler.usernameFrom(second, ISSUER, AUDIENCE));
+    }
+
+    @IsTest
+    static void matchesTheIssuerExactly() {
+        Set<String> trusted = new Set<String>{ ISSUER, ISSUER_TWO };
+        for (String iss : new List<String>{
+            'https://gateway.test.attacker.test', 'https://gateway.tes', 'https://gateway.test/x',
+            'https://attacker.test/https://gateway.test', 'https://gateway.test//', 'https://sub.gateway.test',
+            'HTTPS://GATEWAY.TEST', 'https://Gateway.test', ' https://gateway.test', 'https://gateway.test ',
+            'http://gateway.test', 'gateway.test', 'https://gateway', '', '/'
+        }) {
+            Assert.isNull(P0AgentTokenExchangeHandler.trustedIssuer(
+                claims(new Map<String, Object>{ 'iss' => iss }), trusted), 'iss: ' + iss);
+        }
+        Assert.isNull(P0AgentTokenExchangeHandler.trustedIssuer(
+            claims(new Map<String, Object>{ 'iss' => 42 }), trusted));
+        Assert.isNull(P0AgentTokenExchangeHandler.trustedIssuer(
+            claims(new Map<String, Object>{ 'iss' => new List<Object>{ ISSUER } }), trusted));
+        Map<String, Object> noIssuer = claims(new Map<String, Object>());
+        noIssuer.remove('iss');
+        Assert.isNull(P0AgentTokenExchangeHandler.trustedIssuer(noIssuer, trusted));
+    }
+
+    // validateIncomingToken fetches a JWKS only for the issuer that trustedIssuer returns, and an
+    // unknown issuer returns before that. Test code cannot observe the callout itself.
+    @IsTest
+    static void refusesAnUnknownIssuerBeforeAnyJwksFetch() {
+        trust(ISSUER, new List<String>{ ISSUER_TWO });
+        Auth.TokenValidationResult result = new P0AgentTokenExchangeHandler().validateIncomingToken(
+            'P0_Agent', null,
+            unsignedToken(claims(new Map<String, Object>{ 'iss' => 'https://attacker.test' })),
+            Auth.OAuth2TokenExchangeType.JWT);
+
+        Assert.isFalse(result.isValid());
+        Assert.isNull(P0AgentTokenExchangeHandler.trustedIssuer(
+            claims(new Map<String, Object>{ 'iss' => 'https://attacker.test' }), P0AgentSettings.gatewayIssuers()));
+    }
+
+    @IsTest
     static void decodesTheTokenPayload() {
         String payload = EncodingUtil.base64Encode(Blob.valueOf('{"sub":"mcps/x/1"}'))
             .replace('+', '-').replace('/', '_').remove('=');
@@ -77,8 +157,7 @@ private class P0AgentTokenExchangeHandlerTest {
 
     @IsTest
     static void refusesAJwtItCannotVerify() {
-        P0AgentSettings.settingOverride = new P0_Agent_Setting__mdt(
-            Agent_Role__c = ROLE, Gateway_Issuer__c = ISSUER);
+        trust(ISSUER, new List<String>());
         Auth.TokenValidationResult result = new P0AgentTokenExchangeHandler().validateIncomingToken(
             'P0_Agent', null, 'e30.e30.sig', Auth.OAuth2TokenExchangeType.JWT);
         Assert.isFalse(result.isValid());

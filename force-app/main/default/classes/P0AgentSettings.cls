@@ -1,5 +1,6 @@
 // The org's P0 agent settings: the `Default` record of P0_Agent_Setting__mdt,
-// and the grantable list in P0_Grantable_Permission_Set__mdt.
+// the extra gateways in P0_Gateway_Issuer__mdt, and the grantable list in
+// P0_Grantable_Permission_Set__mdt.
 public without sharing class P0AgentSettings {
 
     public static final String AGENT_PROFILE = 'Salesforce API Only System Integrations';
@@ -8,6 +9,7 @@ public without sharing class P0AgentSettings {
 
     @TestVisible private static P0_Agent_Setting__mdt settingOverride;
     @TestVisible private static List<String> grantableOverride;
+    @TestVisible private static List<String> extraIssuersOverride;
 
     public class MissingSettingException extends Exception {}
 
@@ -22,9 +24,28 @@ public without sharing class P0AgentSettings {
         return current().Agent_Role__c;
     }
 
-    /** The gateway's issuer URL, without a trailing slash. */
-    public static String gatewayIssuer() {
-        return current().Gateway_Issuer__c.removeEnd('/');
+    /** The issuer URLs of the gateways this org trusts, without trailing slashes:
+     * the Default record's (so an org with only that record is unchanged) and one
+     * per P0_Gateway_Issuer__mdt record. Only https issuers count, because a token
+     * picks its issuer from this set and Apex then fetches that issuer's keys. */
+    public static Set<String> gatewayIssuers() {
+        List<String> configured = new List<String>{ current().Gateway_Issuer__c };
+        if (extraIssuersOverride != null) {
+            configured.addAll(extraIssuersOverride);
+        } else {
+            for (P0_Gateway_Issuer__mdt row : P0_Gateway_Issuer__mdt.getAll().values()) {
+                configured.add(row.Issuer__c);
+            }
+        }
+        Set<String> issuers = new Set<String>();
+        for (String issuer : configured) {
+            if (issuer == null) continue;
+            String normalized = issuer.removeEnd('/');
+            if (normalized.startsWith('https://') && normalized.length() > 'https://'.length()) {
+                issuers.add(normalized);
+            }
+        }
+        return issuers;
     }
 
     public static List<String> grantable() {
