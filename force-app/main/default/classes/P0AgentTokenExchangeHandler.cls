@@ -12,8 +12,10 @@ public without sharing class P0AgentTokenExchangeHandler extends Auth.Oauth2Toke
             Map<String, Object> claims = claimsOf(incomingToken);
             String issuer = trustedIssuer(claims, P0AgentSettings.gatewayIssuers());
             if (issuer == null) return new Auth.TokenValidationResult(false);
-            // Checks the signature against the gateway JWKS, and checks exp.
+            // Checks the signature against the gateway JWKS. Its true argument is shouldUseCache, and
+            // the reference does not say it checks exp, so unexpired() does.
             Auth.JWTUtil.validateJWTWithKeysEndpoint(incomingToken, issuer + '/.well-known/jwks.json', true);
+            if (!unexpired(claims, System.now().getTime() / 1000)) return new Auth.TokenValidationResult(false);
             String username = usernameFrom(claims, issuer, URL.getOrgDomainUrl().toExternalForm());
             if (username == null) return new Auth.TokenValidationResult(false);
             Auth.UserData userData = new Auth.UserData(
@@ -50,6 +52,16 @@ public without sharing class P0AgentTokenExchangeHandler extends Auth.Oauth2Toke
         if (!(iss instanceof String)) return null;
         String issuer = ((String) iss).removeEnd('/');
         return trusted.contains(issuer) ? issuer : null;
+    }
+
+    /** @return whether exp (epoch seconds) is after nowSeconds. A missing or non-numeric exp is not. */
+    @TestVisible
+    private static Boolean unexpired(Map<String, Object> claims, Long nowSeconds) {
+        Object exp = claims.get('exp');
+        if (exp instanceof Integer) return (Integer) exp > nowSeconds;
+        if (exp instanceof Long) return (Long) exp > nowSeconds;
+        if (exp instanceof Decimal) return (Decimal) exp > nowSeconds;
+        return false;
     }
 
     /** @return the agent username, or null when iss, aud or sub does not match */

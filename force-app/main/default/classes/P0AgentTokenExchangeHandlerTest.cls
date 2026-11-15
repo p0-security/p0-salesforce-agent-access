@@ -190,6 +190,28 @@ private class P0AgentTokenExchangeHandlerTest {
         Assert.isFalse(result.isValid());
     }
 
+    // JSON numbers come back as Integer, Long or Decimal, and a token with no usable exp is refused.
+    @IsTest
+    static void treatsOnlyAFutureNumericExpAsUnexpired() {
+        Long now = 1800000000;
+
+        Assert.isTrue(P0AgentTokenExchangeHandler.unexpired(
+            claims(new Map<String, Object>{ 'exp' => 1800000060 }), now));
+        Assert.isTrue(P0AgentTokenExchangeHandler.unexpired(
+            claims(new Map<String, Object>{ 'exp' => 9000000000L }), now));
+        Assert.isTrue(P0AgentTokenExchangeHandler.unexpired(
+            claims(new Map<String, Object>{ 'exp' => 1800000060.5 }), now));
+        Assert.isFalse(P0AgentTokenExchangeHandler.unexpired(
+            claims(new Map<String, Object>{ 'exp' => 1800000000 }), now), 'exp equal to now is expired');
+        Assert.isFalse(P0AgentTokenExchangeHandler.unexpired(
+            claims(new Map<String, Object>{ 'exp' => 1799999999 }), now));
+        Assert.isFalse(P0AgentTokenExchangeHandler.unexpired(claims(new Map<String, Object>()), now), 'no exp');
+        Assert.isFalse(P0AgentTokenExchangeHandler.unexpired(
+            claims(new Map<String, Object>{ 'exp' => '9999999999' }), now), 'a string exp');
+        Assert.isFalse(P0AgentTokenExchangeHandler.unexpired(
+            claims(new Map<String, Object>{ 'exp' => null }), now));
+    }
+
     @IsTest
     static void mapsOnlyActiveUsersInTheAgentRoleAndProfile() {
         trust(new List<String>{ ISSUER });
