@@ -68,6 +68,17 @@ for username in "$provisioner" "$handler"; do
   fi
 done
 
+# Every org-setup deploy needs these, including the profile's: the replacements in
+# org-setup/sfdx-project.json fail on any file when a variable is unset.
+export P0_GATEWAY_ISSUER="$gateway_issuer" \
+  P0_PROVISIONER_USERNAME="$provisioner" \
+  P0_HANDLER_USERNAME="$handler" \
+  P0_CONTACT_EMAIL="$contact"
+
+step "Deploying the agent profile"
+# The package's tests and its facade look the profile up by name, so it comes first.
+(cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 -m Profile)
+
 step "Deploying the package source"
 # Runs only the package's tests, so tests elsewhere in the org cannot block it.
 # The facade tests make agent users, so the org needs a free Salesforce
@@ -88,10 +99,6 @@ else
 fi
 
 step "Deploying the org setup"
-export P0_GATEWAY_ISSUER="$gateway_issuer" \
-  P0_PROVISIONER_USERNAME="$provisioner" \
-  P0_HANDLER_USERNAME="$handler" \
-  P0_CONTACT_EMAIL="$contact"
 # The apps must exist before their policies and the handler registration.
 (cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 \
   -m Role -m CustomMetadata -m RemoteSiteSetting -m ExternalClientApplication \

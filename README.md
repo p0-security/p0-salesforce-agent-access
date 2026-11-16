@@ -3,7 +3,7 @@
 Salesforce source for P0 agent access. P0 provisions an API-only user for each agent session through `P0AgentFacade`. The P0 agentic gateway exchanges its own token for a session of that user through `P0AgentTokenExchangeHandler`.
 
 - `force-app/` holds what can go in a Salesforce package: the facade, the token-exchange handler, their settings and tests, the grantable-list and settings metadata types, and the `P0_Agent_App_Access` and `P0_Agent_Provisioner` permission sets.
-- `org-setup/` holds what Salesforce cannot package, because it is per org: the `P0_Agents` role, the `P0 Agent` and `P0 Provisioner` external client apps, the token-exchange handler registration, the gateway's remote site, and the `Default` settings record. Deploy-time replacements in its `sfdx-project.json` fill in the values.
+- `org-setup/` holds what Salesforce cannot package, because it is per org: the `P0_Agents` role, the `P0 Agent API Only` profile that agent users get (API access only, so a grant's permission sets are all they can reach), the `P0 Agent` and `P0 Provisioner` external client apps, the token-exchange handler registration, the gateway's remote site, and the `Default` settings record. Deploy-time replacements in its `sfdx-project.json` fill in the values.
 - `setup.sh` installs both in an org. `org-values.sh` prints, as JSON, the values that P0 asks for.
 
 ## Install in an org
