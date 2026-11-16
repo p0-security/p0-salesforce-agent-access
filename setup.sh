@@ -42,9 +42,10 @@ if [[ "$gateway_issuer" != https://* ]]; then
   exit 2
 fi
 gateway_issuer="${gateway_issuer%/}"
-# The issuer goes into XML files and a JWKS URL, so allow only plain URL characters.
-if [[ ! "$gateway_issuer" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/-]*)?$ ]]; then
-  echo "--gateway-issuer must be a plain https URL, e.g. https://gateway.example.com" >&2
+# The issuer goes into XML files and a JWKS URL, so allow only plain URL characters. The
+# handler matches a token's iss exactly, so a mixed-case host would be trusted but never match.
+if [[ ! "$gateway_issuer" =~ ^https://[a-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/-]*)?$ ]]; then
+  echo "--gateway-issuer must be a plain https URL with a lowercase host, e.g. https://gateway.example.com" >&2
   exit 2
 fi
 if [[ "$provisioner" == "$handler" ]]; then

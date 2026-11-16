@@ -33,6 +33,10 @@ sf data query --target-org <alias> -q "SELECT DeveloperName, Issuer__c FROM P0_G
 
 Then run a token exchange from each gateway.
 
+## Leftovers in an upgraded org
+
+An upgraded org keeps the old `P0_Gateway` remote site and the old value of the `Gateway Issuer` field on the `Default` record. Nothing reads them, and they do no harm. When you stop trusting a gateway, delete its `P0 Gateway Issuer` record and its remote sites: `P0_Gateway_<name>`, and `P0_Gateway` as well for the org's original gateway.
+
 ## Roll back
 
-Redeploy the earlier version, then run its `setup.sh` with the same `--gateway-issuer`. That writes the issuer back to the `Default` record. The earlier code ignores the `P0 Gateway Issuer` records, which stay in the org.
+If the `Gateway Issuer` field of the `Default` record is empty, set it to the gateway's issuer URL first (Setup > Custom Metadata Types > P0 Agent Setting > Manage Records), because the earlier package makes that field required again. Then redeploy the earlier version and run its `setup.sh` with the same `--gateway-issuer`. That writes the issuer back to the `Default` record. The earlier code ignores the `P0 Gateway Issuer` records, which stay in the org.
