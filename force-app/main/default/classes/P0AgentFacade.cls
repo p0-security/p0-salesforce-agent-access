@@ -74,6 +74,10 @@ global without sharing class P0AgentFacade {
             return agentResult(u.Id, username, false, reactivated);
         }
 
+        // The profile comes from org-setup, not this package, so an org can lack it.
+        List<Profile> profiles = [SELECT Id FROM Profile WHERE Name = :AGENT_PROFILE LIMIT 1];
+        if (profiles.isEmpty()) throw fail(424, 'agent_profile_missing');
+
         User u = new User(
             Username = username,
             LastName = 'P0 Agent ' + key,
@@ -83,7 +87,7 @@ global without sharing class P0AgentFacade {
             LanguageLocaleKey = 'en_US',
             LocaleSidKey = 'en_US',
             TimeZoneSidKey = 'GMT',
-            ProfileId = [SELECT Id FROM Profile WHERE Name = :AGENT_PROFILE LIMIT 1].Id,
+            ProfileId = profiles[0].Id,
             UserRoleId = [SELECT Id FROM UserRole WHERE DeveloperName = :agentRole LIMIT 1].Id
         );
         Database.DMLOptions options = new Database.DMLOptions();
