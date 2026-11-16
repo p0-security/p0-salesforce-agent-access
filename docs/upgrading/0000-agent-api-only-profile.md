@@ -1,3 +1,7 @@
+## Release date
+
+2026-11-16
+
 # Agent users move to the `P0 Agent API Only` profile
 
 ## Who is affected
