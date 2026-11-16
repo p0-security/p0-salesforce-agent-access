@@ -1,7 +1,5 @@
 # Agent users move to the `P0 Agent API Only` profile
 
-The Salesforce integration is in beta, so P0 hand-holds these upgrades. This page lists the steps.
-
 ## Who is affected
 
 Every org that installed an earlier version of this package.
