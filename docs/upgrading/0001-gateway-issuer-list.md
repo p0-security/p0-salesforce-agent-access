@@ -39,7 +39,7 @@ Then run a token exchange from each gateway.
 
 ## Leftovers in an upgraded org
 
-An upgraded org keeps the old `P0_Gateway` remote site and the old value of the `Gateway Issuer` field on the `Default` record. Nothing reads them, and they do no harm. When you stop trusting a gateway, delete its `P0 Gateway Issuer` record and its remote sites: `P0_Gateway_<name>`, and `P0_Gateway` as well for the org's original gateway.
+An upgraded org keeps the old `P0_Gateway` remote site and the old value of the `Gateway Issuer` field on the `Default` record. Nothing reads them, and they do no harm. To stop trusting a gateway, run `./setup.sh --target-org <alias> --remove-gateway-issuer https://<gateway host>`. It deletes that gateway's `P0 Gateway Issuer` record and its remote sites named `P0_Gateway*`, found by URL, which includes the original `P0_Gateway` site. It leaves a remote site with any other name alone, because something else may use it. To move a gateway to a new URL, give `--gateway-issuer` for the new one and `--remove-gateway-issuer` for the old one in the same run.
 
 ## Roll back
 

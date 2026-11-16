@@ -3,7 +3,7 @@
 Salesforce source for P0 agent access. P0 provisions an API-only user for each agent session through `P0AgentFacade`. The P0 agentic gateway exchanges its own token for a session of that user through `P0AgentTokenExchangeHandler`.
 
 - `force-app/` holds what can go in a Salesforce package: the facade, the token-exchange handler, their settings and tests, the grantable-list, settings and gateway-issuer metadata types, and the `P0_Agent_App_Access` and `P0_Agent_Provisioner` permission sets.
-- `org-setup/` holds what Salesforce cannot package, because it is per org: the `P0_Agents` role, the `P0 Agent API Only` profile that agent users get (API access only, so a grant's permission sets are all they can reach), the `P0 Agent` and `P0 Provisioner` external client apps, the token-exchange handler registration, and the `Default` settings record. Deploy-time replacements in its `sfdx-project.json` fill in the values.
+- `org-setup/` holds what Salesforce cannot package, because it is per org: the `P0_Agents` role, the `P0 Agent API Only` profile that agent users get (API access only, so a grant's permission sets are all they can reach), the `P0 Agent` and `P0 Provisioner` external client apps, the token-exchange handler registration, and the `Default` settings record. Deploy-time replacements in its `sfdx-project.json` fill in the values, and `templates/` holds the gateway record and remote site that `setup.sh` fills in for each gateway.
 - `setup.sh` installs both in an org. `org-values.sh` prints, as JSON, the values that P0 asks for.
 
 ## Install in an org
@@ -23,7 +23,7 @@ Salesforce source for P0 agent access. P0 provisions an API-only user for each a
 
    To print the values again later, run `./org-values.sh <alias>`.
 
-   The handler trusts only the gateways in `P0 Gateway Issuer` records, so the script makes a record and a `P0_Gateway_<name>` remote site (for the gateway's JWKS) for the `--gateway-issuer`. The handler accepts a token only when its `iss` equals one of these issuers, and an agent is a different user behind each gateway. To trust a second gateway, run the script again with its URL; running it again with the same issuer changes nothing. To stop trusting a gateway, delete its record (Setup > Custom Metadata Types) and its remote site.
+   The handler trusts only the gateways in `P0 Gateway Issuer` records, so the script makes a record and a `P0_Gateway_<name>` remote site (for the gateway's JWKS) for the `--gateway-issuer`. The handler accepts a token only when its `iss` equals one of these issuers, and an agent is a different user behind each gateway. To trust a second gateway, run the script again with its URL. Running it again with the same issuer changes nothing. To stop trusting a gateway, run `./setup.sh --target-org <alias> --remove-gateway-issuer https://<gateway host>`, which needs no other argument. It finds the record and the `P0_Gateway*` remote sites by the gateway's URL and deletes them. Give both options in one run to move to a new URL.
 
    The package's tests make agent users, so the org needs a free Salesforce Integration licence.
 3. Add a `P0 Grantable Permission Set` record for each permission set that agents may request. Agent users have the Salesforce Integration licence, so a set with object permissions must use the `Salesforce API Integration` permission set licence. The facade refuses sets with Modify All Data, View All Data, Manage Users, Author Apex, Customize Application, or Manage Profiles and Permission Sets.
