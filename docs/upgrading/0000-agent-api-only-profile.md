@@ -1,7 +1,5 @@
 # Agent users move to the `P0 Agent API Only` profile
 
-The Salesforce integration is in beta, so P0 hand-holds these upgrades. This page lists the steps.
-
 ## Who is affected
 
 Every org that installed an earlier version of this package.
@@ -24,12 +22,17 @@ The facade and the token-exchange handler only recognise agent users on the `P0 
 4. A session that had a grant before the upgrade keeps its agent key. Its next request finds its old, inactive user and fails with `username_taken`. Either start a new session, or move the old users to the new profile once:
 
    ```sh
-   new=$(sf data query --target-org <alias> --json -q "SELECT Id FROM Profile WHERE Name = 'P0 Agent API Only'" | jq -r '.result.records[0].Id')
-   sf data query --target-org <alias> --json -q "SELECT Id FROM User WHERE Username LIKE 'p0-agent-%' AND Profile.Name = 'Salesforce API Only System Integrations'" \
-     | jq -r '.result.records[].Id' \
-     | while read -r id; do
-         sf data update record --target-org <alias> --sobject User --record-id "$id" --values "ProfileId=$new"
-       done
+   new=$(sf data query --target-org <alias> --json -q "SELECT Id FROM Profile WHERE Name = 'P0 Agent API Only'" | jq -r '.result.records[0].Id // empty')
+   if [ -z "$new" ]; then
+     echo "The P0 Agent API Only profile is missing. Run ./setup.sh first." >&2
+   else
+     sf data query --target-org <alias> --json -q "SELECT Id FROM User WHERE Username LIKE 'p0-agent-%' AND Profile.Name = 'Salesforce API Only System Integrations'" \
+       | jq -r '.result.records[].Id' \
+       | while read -r id; do
+           sf data update record --target-org <alias> --sobject User --record-id "$id" --values "ProfileId=$new" \
+             || echo "Could not move user $id" >&2
+         done
+   fi
    ```
 
 ## Verify
@@ -42,4 +45,6 @@ sf data query --target-org <alias> -q "SELECT Name, Profile.Name FROM User WHERE
 
 ## Roll back
 
-Revoke every grant, redeploy the earlier version, then move the agent users back to `Salesforce API Only System Integrations` with the query above, swapping the two profile names. The earlier code only recognises that profile.
+1. Revoke every grant in P0, so that no agent user is active.
+2. Redeploy the earlier version of the package. It only recognises agent users on `Salesforce API Only System Integrations`.
+3. Move the agent users back. Run the command in step 4 with the two profile names swapped: select the users whose `Profile.Name` is `P0 Agent API Only`, and set `ProfileId` to the id of `Salesforce API Only System Integrations`.
