@@ -1,7 +1,5 @@
 # The org trusts gateways through `P0 Gateway Issuer` records
 
-The Salesforce integration is in beta, so P0 hand-holds these upgrades. This page lists the steps.
-
 ## Who is affected
 
 Every org that installed an earlier version of this package.
