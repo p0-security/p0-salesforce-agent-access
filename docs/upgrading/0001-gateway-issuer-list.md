@@ -1,3 +1,7 @@
+## Release date
+
+2026-11-17
+
 # The org trusts gateways through `P0 Gateway Issuer` records
 
 ## Who is affected
