@@ -123,30 +123,11 @@ step "Deploying the package source"
   --tests P0AgentFacadeTest --tests P0AgentTokenExchangeHandlerTest \
   --tests P0AgentSettingsTest)
 
-step "Giving the provisioner the P0_Agent_Provisioner permission set"
-assigned="$(query "SELECT Id FROM PermissionSetAssignment WHERE Assignee.Username = '$provisioner' AND PermissionSet.Name = 'P0_Agent_Provisioner'" | jq length)"
-if [[ "$assigned" == "0" ]]; then
-  sf org assign permset --target-org "$target_org" \
-    --name P0_Agent_Provisioner --on-behalf-of "$provisioner"
-else
-  echo "Already assigned"
-fi
-
-step "Deploying the org setup"
-export P0_PROVISIONER_USERNAME="$provisioner" \
-  P0_HANDLER_USERNAME="$handler" \
-  P0_CONTACT_EMAIL="$contact"
-# The apps must exist before their policies and the handler registration.
-(cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 \
-  -m Role -m CustomMetadata -m ExternalClientApplication \
-  -m ExtlClntAppOauthSettings -m ExtlClntAppGlobalOauthSettings)
-(cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 \
-  -m ExtlClntAppOauthConfigurablePolicies -m OauthTokenExchangeHandler)
-
 step "Trusting the gateway"
 # The handler trusts only the P0_Gateway_Issuer records, and Apex may call only a
-# remote site, so each gateway gets both. Metadata file names cannot come from
-# replacements, so render these files here.
+# remote site, so each gateway gets both. This comes right after the package, so an org
+# that already has the handler trusts no gateway for as short a time as possible.
+# Metadata file names cannot come from replacements, so render these files here.
 issuer="$(issuer_normalize "$gateway_issuer")"
 records="$(query "SELECT DeveloperName, Issuer__c FROM P0_Gateway_Issuer__mdt")"
 name="$(issuer_record_name "$issuer" "$records")"
@@ -177,6 +158,26 @@ cat >"$extra/force-app/main/default/remoteSiteSettings/P0_Gateway_$name.remoteSi
 </RemoteSiteSetting>
 XML
 (cd "$extra" && sf project deploy start --target-org "$target_org" --wait 30 --source-dir force-app)
+
+step "Giving the provisioner the P0_Agent_Provisioner permission set"
+assigned="$(query "SELECT Id FROM PermissionSetAssignment WHERE Assignee.Username = '$provisioner' AND PermissionSet.Name = 'P0_Agent_Provisioner'" | jq length)"
+if [[ "$assigned" == "0" ]]; then
+  sf org assign permset --target-org "$target_org" \
+    --name P0_Agent_Provisioner --on-behalf-of "$provisioner"
+else
+  echo "Already assigned"
+fi
+
+step "Deploying the org setup"
+export P0_PROVISIONER_USERNAME="$provisioner" \
+  P0_HANDLER_USERNAME="$handler" \
+  P0_CONTACT_EMAIL="$contact"
+# The apps must exist before their policies and the handler registration.
+(cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 \
+  -m Role -m CustomMetadata -m ExternalClientApplication \
+  -m ExtlClntAppOauthSettings -m ExtlClntAppGlobalOauthSettings)
+(cd "$here/org-setup" && sf project deploy start --target-org "$target_org" --wait 30 \
+  -m ExtlClntAppOauthConfigurablePolicies -m OauthTokenExchangeHandler)
 
 step "Getting the apps' consumer keys"
 values="$("$here/org-values.sh" "$target_org")"
