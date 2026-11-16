@@ -4,7 +4,7 @@
 
 Every org that installed an earlier version of this package.
 
-## What breaks
+## What changes
 
 The handler used to trust the one issuer in the `Gateway Issuer` field of the `Default` settings record. It now trusts only `P0 Gateway Issuer` records, and no longer reads that field. Token exchange fails from the package deploy until `setup.sh` creates a record for each gateway. The script does that right after it deploys the package, so the gap lasts seconds.
 
