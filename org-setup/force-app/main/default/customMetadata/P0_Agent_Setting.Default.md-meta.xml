@@ -3,10 +3,6 @@
     <label>Default</label>
     <protected>false</protected>
     <values>
-        <field>Gateway_Issuer__c</field>
-        <value xsi:type="xsd:string">%P0_GATEWAY_ISSUER%</value>
-    </values>
-    <values>
         <field>Agent_Role__c</field>
         <value xsi:type="xsd:string">P0_Agents</value>
     </values>

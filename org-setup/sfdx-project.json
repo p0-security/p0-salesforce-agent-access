@@ -9,11 +9,6 @@
   "replacements": [
     {
       "glob": "force-app/**/*.xml",
-      "stringToReplace": "%P0_GATEWAY_ISSUER%",
-      "replaceWithEnv": "P0_GATEWAY_ISSUER"
-    },
-    {
-      "glob": "force-app/**/*.xml",
       "stringToReplace": "%P0_PROVISIONER_USERNAME%",
       "replaceWithEnv": "P0_PROVISIONER_USERNAME"
     },

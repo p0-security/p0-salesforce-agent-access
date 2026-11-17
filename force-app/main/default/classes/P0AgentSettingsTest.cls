@@ -2,12 +2,67 @@
 private class P0AgentSettingsTest {
 
     @IsTest
-    static void readsTheIssuerWithoutATrailingSlashAndTheRole() {
+    static void readsTheRole() {
         P0AgentSettings.settingOverride = new P0_Agent_Setting__mdt(
-            Agent_Role__c = 'P0_Agents', Gateway_Issuer__c = 'https://gateway.test/');
+            Agent_Role__c = 'P0_Agents');
 
-        Assert.areEqual('https://gateway.test', P0AgentSettings.gatewayIssuer());
         Assert.areEqual('P0_Agents', P0AgentSettings.agentRole());
+    }
+
+    @IsTest
+    static void trustsTheIssuersOfTheRecordsWithoutATrailingSlash() {
+        P0AgentSettings.issuersOverride = new List<String>{
+            'https://gateway.test/', 'https://gateway-two.test', 'https://gateway.test'
+        };
+
+        Assert.areEqual(new Set<String>{ 'https://gateway.test', 'https://gateway-two.test' },
+            P0AgentSettings.gatewayIssuers());
+    }
+
+    @IsTest
+    static void anOrgWithNoRecordsTrustsNoIssuer() {
+        P0AgentSettings.issuersOverride = new List<String>();
+
+        Assert.isTrue(P0AgentSettings.gatewayIssuers().isEmpty());
+    }
+
+    @IsTest
+    static void ignoresTheDefaultRecordsGatewayIssuer() {
+        P0AgentSettings.settingOverride = new P0_Agent_Setting__mdt(
+            Agent_Role__c = 'P0_Agents', Gateway_Issuer__c = 'https://gateway.test');
+        P0AgentSettings.issuersOverride = new List<String>{ 'https://gateway-two.test' };
+
+        Assert.areEqual(new Set<String>{ 'https://gateway-two.test' }, P0AgentSettings.gatewayIssuers());
+    }
+
+    @IsTest
+    static void ignoresIssuersThatAreNotHttps() {
+        P0AgentSettings.issuersOverride = new List<String>{
+            'http://gateway.test', 'https://', 'ftp://gateway-two.test', 'gateway-three.test', '', null,
+            'https://gateway-four.test'
+        };
+
+        Assert.areEqual(new Set<String>{ 'https://gateway-four.test' }, P0AgentSettings.gatewayIssuers());
+    }
+
+    // Only as strong as the records in the org, because tests cannot create custom metadata.
+    @IsTest
+    static void readsTheIssuersFromCustomMetadata() {
+        Set<String> expected = new Set<String>();
+        for (P0_Gateway_Issuer__mdt row : P0_Gateway_Issuer__mdt.getAll().values()) {
+            String issuer = row.Issuer__c.removeEnd('/');
+            if (issuer.startsWith('https://') && issuer.length() > 'https://'.length()) expected.add(issuer);
+        }
+
+        Assert.areEqual(expected, P0AgentSettings.gatewayIssuers());
+    }
+
+    @IsTest
+    static void makesADifferentAgentKeyForEachIssuer() {
+        String subject = 'mcps/salesforce/1111111111111111';
+        // P0 makes the same keys from the same issuer and subject.
+        Assert.areEqual('b54e2fa2dcc5dace6fa68695', P0AgentSettings.agentKey('https://gateway.test', subject));
+        Assert.areEqual('7b2bd530e2ffd2f6b71d9515', P0AgentSettings.agentKey('https://gateway-two.test', subject));
     }
 
     @IsTest

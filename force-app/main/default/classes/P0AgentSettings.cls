@@ -1,5 +1,6 @@
 // The org's P0 agent settings: the `Default` record of P0_Agent_Setting__mdt,
-// and the grantable list in P0_Grantable_Permission_Set__mdt.
+// the trusted gateways in P0_Gateway_Issuer__mdt, and the grantable list in
+// P0_Grantable_Permission_Set__mdt.
 public without sharing class P0AgentSettings {
 
     // Created by org-setup. It holds no data access, so a grant's permission sets are all an agent gets.
@@ -9,6 +10,7 @@ public without sharing class P0AgentSettings {
 
     @TestVisible private static P0_Agent_Setting__mdt settingOverride;
     @TestVisible private static List<String> grantableOverride;
+    @TestVisible private static List<String> issuersOverride;
 
     public class MissingSettingException extends Exception {}
 
@@ -23,9 +25,29 @@ public without sharing class P0AgentSettings {
         return current().Agent_Role__c;
     }
 
-    /** The gateway's issuer URL, without a trailing slash. */
-    public static String gatewayIssuer() {
-        return current().Gateway_Issuer__c.removeEnd('/');
+    /** The issuer URLs of the gateways this org trusts, without trailing slashes: one
+     * per P0_Gateway_Issuer__mdt record. The Default record's Gateway_Issuer__c is not
+     * read. Only https issuers count, because a token picks its issuer from this set
+     * and Apex then fetches that issuer's keys. */
+    public static Set<String> gatewayIssuers() {
+        List<String> configured = new List<String>();
+        if (issuersOverride != null) {
+            configured.addAll(issuersOverride);
+        } else {
+            for (P0_Gateway_Issuer__mdt row : P0_Gateway_Issuer__mdt.getAll().values()) {
+                configured.add(row.Issuer__c);
+            }
+        }
+        Set<String> issuers = new Set<String>();
+        for (String issuer : configured) {
+            String normalized = issuer == null ? null : issuer.removeEnd('/');
+            if (normalized != null && normalized.startsWith('https://') && normalized.length() > 'https://'.length()) {
+                issuers.add(normalized);
+            } else {
+                System.debug(LoggingLevel.WARN, 'Ignoring gateway issuer that is not a lowercase https URL: ' + issuer);
+            }
+        }
+        return issuers;
     }
 
     public static List<String> grantable() {

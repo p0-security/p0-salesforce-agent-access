@@ -15,8 +15,7 @@ private class P0AgentFacadeTest {
     }
 
     private static void configure() {
-        P0AgentSettings.settingOverride = new P0_Agent_Setting__mdt(
-            Agent_Role__c = ROLE, Gateway_Issuer__c = 'https://gateway.test/');
+        P0AgentSettings.settingOverride = new P0_Agent_Setting__mdt(Agent_Role__c = ROLE);
         P0AgentSettings.grantableOverride = new List<String>{ GRANTABLE };
     }
 
